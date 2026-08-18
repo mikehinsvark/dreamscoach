@@ -10,7 +10,7 @@ type UseAuthOptions = {
 export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath } = options ?? {};
   const { isLoaded: clerkLoaded, isSignedIn } = useClerkAuth();
-  const { signOut, openSignIn } = useClerk();
+  const { signOut, redirectToSignIn } = useClerk();
   const utils = trpc.useUtils();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
@@ -52,12 +52,12 @@ export function useAuth(options?: UseAuthOptions) {
     if (redirectPath) {
       window.location.href = redirectPath;
     } else {
-      openSignIn();
+      redirectToSignIn({ redirectUrl: window.location.href });
     }
   }, [
     clerkLoaded,
     isSignedIn,
-    openSignIn,
+    redirectToSignIn,
     redirectOnUnauthenticated,
     redirectPath,
   ]);
@@ -65,7 +65,7 @@ export function useAuth(options?: UseAuthOptions) {
   return {
     ...state,
     refresh: () => meQuery.refetch(),
-    signIn: () => openSignIn(),
+    signIn: () => redirectToSignIn({ redirectUrl: window.location.href }),
     logout,
   };
 }
