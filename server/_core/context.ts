@@ -31,7 +31,17 @@ export async function createContext(
       user = (await db.findOrAdoptClerkUser(identity)) ?? null;
     } catch (error) {
       console.error("[Auth] Clerk user synchronization failed", error);
-      user = null;
+      try {
+        // The verified session itself is sufficient to create a standard rep profile.
+        // Do not grant elevated access when Clerk profile enrichment is unavailable.
+        user = (await db.findOrAdoptClerkUser({
+          openId: auth.userId,
+          loginMethod: "clerk",
+        })) ?? null;
+      } catch (fallbackError) {
+        console.error("[Auth] Clerk fallback user synchronization failed", fallbackError);
+        user = null;
+      }
     }
   }
 
