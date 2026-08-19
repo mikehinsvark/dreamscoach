@@ -6,6 +6,7 @@ import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { createEncryptedDatabaseBackup, hasValidBackupToken } from "./backup";
 import { ENV } from "./env";
 import { serveStatic, setupVite } from "./vite";
 
@@ -40,6 +41,30 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.post("/api/ops/backup/export", async (req, res) => {
+    const backupToken = process.env.BACKUP_JOB_SECRET;
+    const encryptionSecret = process.env.BACKUP_ENCRYPTION_KEY;
+    if (!backupToken || !encryptionSecret) {
+      res.status(503).json({ error: "Production backup is not configured" });
+      return;
+    }
+    if (!hasValidBackupToken(req.header("x-dreamscoach-backup-token"), backupToken)) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    try {
+      const archive = await createEncryptedDatabaseBackup(encryptionSecret);
+      res.set({
+        "Cache-Control": "no-store",
+        "Content-Disposition": 'attachment; filename="dreamscoach-production-backup.enc.json"',
+        "Content-Type": "application/json; charset=utf-8",
+      });
+      res.send(archive);
+    } catch (error) {
+      console.error("[Backup] Encrypted export failed", error);
+      res.status(500).json({ error: "Backup export failed" });
+    }
+  });
   // tRPC API
   app.use(
     "/api/trpc",

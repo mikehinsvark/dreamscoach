@@ -1,0 +1,57 @@
+name: Daily Encrypted Production Backup
+
+on:
+  schedule:
+    - cron: "15 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export-and-retain:
+    runs-on: ubuntu-latest
+    env:
+      BACKUP_EXPORT_URL: https://dreamscoach.pro/api/ops/backup/export
+      BACKUP_RETENTION_DAYS: "30"
+    steps:
+      - name: Obtain encrypted archive from Dreams Coach
+        env:
+          BACKUP_JOB_SECRET: ${{ secrets.BACKUP_JOB_SECRET }}
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          stamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+          archive="work/dreamscoach-mysql-${stamp}.enc.json"
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 \
+            -H "x-dreamscoach-backup-token: ${BACKUP_JOB_SECRET}" \
+            -o "${archive}" \
+            "${BACKUP_EXPORT_URL}"
+          sha256sum "${archive}" > "${archive}.sha256"
+
+      - name: Load the private backup repository deploy key
+        env:
+          BACKUP_REPO_SSH_KEY: ${{ secrets.BACKUP_REPO_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          eval "$(ssh-agent -s)"
+          echo "${BACKUP_REPO_SSH_KEY}" | tr -d '\r' | ssh-add -
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Retain the encrypted daily archive
+        run: |
+          set -euo pipefail
+          git clone git@github.com:mikehinsvark/dreamscoach-backups.git backup-repo
+          cd backup-repo
+          mkdir -p archives
+          mv ../work/* archives/
+          find archives -type f -name "*.enc.json" -mtime +"${BACKUP_RETENTION_DAYS}" -print -delete
+          find archives -type f -name "*.enc.json.sha256" -mtime +"${BACKUP_RETENTION_DAYS}" -print -delete
+          git config user.name "Dreams Coach Backup Bot"
+          git config user.email "backup-bot@dreamscoach.pro"
+          git add archives
+          if ! git diff --cached --quiet; then
+            git commit -m "backup: encrypted production archive $(date -u +%F)"
+            git push origin HEAD:main
+          fi
