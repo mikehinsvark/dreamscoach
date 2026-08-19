@@ -261,7 +261,7 @@ export default function Home() {
           </nav>
           <button
             className="header-action"
-            onClick={() => scrollTo("#weekly-plan")}
+            onClick={openSecurePlanner}
             type="button"
           >
             {isAuthenticated ? "My Workspace" : "Secure Sign In"} <ArrowRight className="h-4 w-4" aria-hidden="true" />
