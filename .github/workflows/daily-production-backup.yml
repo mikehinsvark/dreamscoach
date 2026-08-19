@@ -23,7 +23,7 @@ jobs:
           mkdir -p work
           stamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
           archive="work/dreamscoach-mysql-${stamp}.enc.json"
-          curl --fail --silent --show-error --retry 3 --retry-delay 10 \
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --request POST \
             -H "x-dreamscoach-backup-token: ${BACKUP_JOB_SECRET}" \
             -o "${archive}" \
             "${BACKUP_EXPORT_URL}"
