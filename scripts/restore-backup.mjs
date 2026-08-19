@@ -33,6 +33,12 @@ const tableOrder = [
   "crmConnections",
 ];
 const connection = await mysql.createConnection(restoreUrl);
+const mysqlValue = value => {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)) {
+    return value;
+  }
+  return value.replace("T", " ").replace(/\.\d{3}Z$/, "").replace("Z", "");
+};
 try {
   for (const tableName of tableOrder) {
     const rows = backup.tables[tableName] ?? [];
@@ -41,7 +47,7 @@ try {
     const placeholders = columns.map(() => "?").join(", ");
     const statement = `INSERT INTO \`${tableName}\` (${columns.map(column => `\`${column}\``).join(", ")}) VALUES (${placeholders})`;
     for (const row of rows) {
-      await connection.execute(statement, columns.map(column => row[column]));
+      await connection.execute(statement, columns.map(column => mysqlValue(row[column])));
     }
   }
   console.log(`Restored encrypted archive created ${backup.createdAt} into the isolated database.`);
