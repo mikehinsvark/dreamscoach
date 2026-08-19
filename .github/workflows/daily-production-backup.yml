@@ -29,19 +29,18 @@ jobs:
             "${BACKUP_EXPORT_URL}"
           sha256sum "${archive}" > "${archive}.sha256"
 
-      - name: Load the private backup repository deploy key
+      - name: Retain the encrypted daily archive
         env:
           BACKUP_REPO_SSH_KEY: ${{ secrets.BACKUP_REPO_SSH_KEY }}
         run: |
           set -euo pipefail
-          eval "$(ssh-agent -s)"
-          echo "${BACKUP_REPO_SSH_KEY}" | tr -d '\r' | ssh-add -
+          key_file="$(mktemp)"
+          trap 'rm -f "${key_file}"' EXIT
+          printf '%s\n' "${BACKUP_REPO_SSH_KEY}" > "${key_file}"
+          chmod 600 "${key_file}"
           mkdir -p ~/.ssh
           ssh-keyscan github.com >> ~/.ssh/known_hosts
-
-      - name: Retain the encrypted daily archive
-        run: |
-          set -euo pipefail
+          export GIT_SSH_COMMAND="ssh -i ${key_file} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
           git clone git@github.com:mikehinsvark/dreamscoach-backups.git backup-repo
           cd backup-repo
           mkdir -p archives
