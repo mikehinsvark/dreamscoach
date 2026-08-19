@@ -13,8 +13,10 @@ import {
 } from "../drizzle/schema";
 import type { ProspectMetrics } from "../shared/prospect";
 import { ENV } from "./_core/env";
+import { ensureProspectCoachSchema } from "./_core/schemaBootstrap";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _schemaReady: Promise<void> | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
@@ -25,6 +27,13 @@ export async function getDb() {
       _db = null;
     }
   }
+  if (_db && !_schemaReady) {
+    _schemaReady = ensureProspectCoachSchema(_db).catch((error) => {
+      _schemaReady = null;
+      throw error;
+    });
+  }
+  if (_schemaReady) await _schemaReady;
   return _db;
 }
 
