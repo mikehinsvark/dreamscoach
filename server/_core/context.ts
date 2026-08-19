@@ -1,6 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
-import { verifyToken } from "@clerk/backend";
-import { clerkClient, getAuth } from "@clerk/express";
+import { createClerkClient, verifyToken } from "@clerk/backend";
+import { getAuth } from "@clerk/express";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
 import { clerkUserUpdate } from "./clerkIdentity";
@@ -24,10 +24,10 @@ export async function createContext(
     const header = opts.req.headers.authorization;
     const bearer = header?.startsWith("Bearer ") ? header.slice(7) : null;
 
-    if (bearer && process.env.CLERK_SECRET_KEY) {
+    if (bearer && ENV.clerkSecretKey) {
       try {
         const verifiedToken = await verifyToken(bearer, {
-          secretKey: process.env.CLERK_SECRET_KEY,
+          secretKey: ENV.clerkSecretKey,
         });
         clerkUserId = verifiedToken.sub ?? null;
       } catch (error) {
@@ -38,7 +38,8 @@ export async function createContext(
 
   if (clerkUserId) {
     try {
-      const clerkUser = await clerkClient.users.getUser(clerkUserId);
+      const clerk = createClerkClient({ secretKey: ENV.clerkSecretKey });
+      const clerkUser = await clerk.users.getUser(clerkUserId);
       const email = clerkUser.primaryEmailAddress?.emailAddress ?? null;
       const identity = clerkUserUpdate({
         clerkUserId: clerkUser.id,
