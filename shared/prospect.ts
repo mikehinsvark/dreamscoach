@@ -23,7 +23,7 @@ export const prospectMetrics: Array<{
   color: string;
 }> = [
   { key: "phoneHours", letter: "P", label: "Phone Prospecting Hours", shortLabel: "Phone", unit: "hrs", max: 40, step: 1, color: "#1D5FE9" },
-  { key: "recruits", letter: "R", label: "Recruits", shortLabel: "Recruits", unit: "people", max: 10, step: 1, color: "#8A42E8" },
+  { key: "recruits", letter: "R", label: "Strategic Partners", shortLabel: "Partners", unit: "partners", max: 10, step: 1, color: "#8A42E8" },
   { key: "outreachContacts", letter: "O", label: "Outreach Contacts", shortLabel: "Outreach", unit: "contacts", max: 150, step: 5, color: "#008A88" },
   { key: "submittedApplications", letter: "S", label: "Submitted Applications", shortLabel: "Submitted", unit: "applications", max: 20, step: 1, color: "#D66A04" },
   { key: "pipelineAppointments", letter: "P", label: "Prospects Added to Pipeline", shortLabel: "Pipeline", unit: "appointments", max: 50, step: 1, color: "#CF306C" },
